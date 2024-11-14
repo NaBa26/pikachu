@@ -21,7 +21,7 @@ A mobile Android application built with Kotlin that displays sensor data from a 
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/mobile-sensor-data-viewer.git
+   git clone https://github.com/NaBa26/pikachu.git
 2. **Open the project in Android Studio.**
 
 3. **Start Android Studio.**
