@@ -1,15 +1,10 @@
 package com.example.pikachu.view
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.icu.text.SimpleDateFormat
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -34,19 +29,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
 import com.example.pikachu.ui.theme.PikachuTheme
 import java.util.Date
 import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.sin
-
-class MainActivity : ComponentActivity(), SensorEventListener, LocationListener {
+class GyroscopeActivity : ComponentActivity(), SensorEventListener {
     private val handler = Handler(Looper.getMainLooper())
     private var isFetching = false
     private lateinit var sensorManager: SensorManager
     private var sensor: Sensor? = null
-    private lateinit var locationManager: LocationManager
     private val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
     // Mutable list of log entries that updates the UI whenever modified
@@ -61,10 +53,9 @@ class MainActivity : ComponentActivity(), SensorEventListener, LocationListener 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Initialize sensor and location managers
+        // Initialize sensor manager and gyroscope sensor
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
 
         setContent {
             PikachuTheme {
@@ -91,28 +82,10 @@ class MainActivity : ComponentActivity(), SensorEventListener, LocationListener 
         sensor?.let { sensor ->
             sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
         }
-
-        // Check and request location permissions if not granted
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED ||
-            ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            locationManager.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER,
-                5000,
-                0f, this
-            )
-        }
     }
 
     private fun stopFetchingSensorData() {
         sensorManager.unregisterListener(this)
-        locationManager.removeUpdates(this)
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
@@ -125,8 +98,6 @@ class MainActivity : ComponentActivity(), SensorEventListener, LocationListener 
             _logs.add(LogEntry(xValue, yValue, zValue, latitude = 0.0, longitude = 0.0, time = currentTime))
         }
     }
-
-    override fun onLocationChanged(location: Location) {}
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
@@ -141,7 +112,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, LocationListener 
 }
 
 // Function to generate a sine wave based on sensor data
-fun generateSineWave(frequency: Double, sampleRate: Int, duration: Double, amplitude: Float): List<Float> {
+fun generateSineWaveGyro(frequency: Double, sampleRate: Int, duration: Double, amplitude: Float): List<Float> {
     val samplesCount = (sampleRate * duration).toInt()
     return List(samplesCount) { i ->
         val time = i.toDouble() / sampleRate
@@ -150,7 +121,7 @@ fun generateSineWave(frequency: Double, sampleRate: Int, duration: Double, ampli
 }
 
 @Composable
-fun SineWaveGraph(
+fun SineWaveGraphGyro(
     sineWaveX: List<Float>,
     sineWaveY: List<Float>,
     sineWaveZ: List<Float>,
@@ -181,15 +152,15 @@ fun SineWaveGraph(
             )
         }
 
-        // Draw three red sine waves for X, Y, Z axes
+        // Draw three sine waves for X, Y, Z axes
         drawWave(sineWaveX, Color.Red)
-        drawWave(sineWaveY, Color.Red)
-        drawWave(sineWaveZ, Color.Red)
+        drawWave(sineWaveY, Color.Yellow)
+        drawWave(sineWaveZ, Color.Blue)
     }
 }
 
 @Composable
-fun AnimatedSineWaveGraph(
+fun AnimatedSineWaveGraphGyro(
     xValue: Float,
     yValue: Float,
     zValue: Float,
@@ -198,10 +169,10 @@ fun AnimatedSineWaveGraph(
     val sampleRate = 100
     val duration = 1.0 // 1 second duration for the sine wave
 
-    // Generate sine waves dynamically based on accelerometer values
-    val sineWaveX = generateSineWave(xValue.toDouble(), sampleRate, duration,xValue/10)
-    val sineWaveY = generateSineWave(yValue.toDouble(), sampleRate, duration,yValue/10)
-    val sineWaveZ = generateSineWave(zValue.toDouble(), sampleRate, duration,zValue/10)
+    // Generate sine waves dynamically based on gyroscope values
+    val sineWaveX = generateSineWaveGyro(xValue.toDouble(), sampleRate, duration, xValue / 10)
+    val sineWaveY = generateSineWaveGyro(yValue.toDouble(), sampleRate, duration, yValue / 10)
+    val sineWaveZ = generateSineWaveGyro(zValue.toDouble(), sampleRate, duration, zValue / 10)
 
     Canvas(modifier = modifier) {
         val canvasWidth = size.width
@@ -228,17 +199,16 @@ fun AnimatedSineWaveGraph(
             )
         }
 
-        // Draw three sine waves in red, one for each axis
+        // Draw three sine waves for X, Y, Z axes
         drawWave(sineWaveX, Color.Red)
         drawWave(sineWaveY, Color.Yellow)
         drawWave(sineWaveZ, Color.Blue)
     }
 }
 
-// Modified UI to handle real-time accelerometer values
 @Composable
 fun SimpleUIWithLogs(
-    logs: List<MainActivity.LogEntry>,
+    logs: List<GyroscopeActivity.LogEntry>,
     xValue: Float,
     yValue: Float,
     zValue: Float,
@@ -317,7 +287,7 @@ fun SimpleUIWithLogs(
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(log.time, color = Color.White, fontSize = 14.sp)
-                            Text("Accelerometer Data:", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("Gyroscope Data:", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             Text("X: ${log.x}", color = Color.White, fontSize = 14.sp)
                             Text("Y: ${log.y}", color = Color.White, fontSize = 14.sp)
                             Text("Z: ${log.z}", color = Color.White, fontSize = 14.sp)
@@ -339,4 +309,3 @@ fun SimpleUIWithLogs(
         }
     }
 }
-
