@@ -1,3 +1,4 @@
+enableFeaturePreview("VERSION_CATALOGS")// added by namit -->can be removed
 pluginManagement {
     repositories {
         google {

@@ -3,6 +3,17 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
 }
+//i have added this
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:7.2.1")
+    }
+}
+//upto here
 
 android {
     namespace = "com.example.pikachu"
@@ -51,6 +62,7 @@ android {
 }
 
 dependencies {
+    classpath 'com.android.tools.build:gradle:7.2.1'
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
